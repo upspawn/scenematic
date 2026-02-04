@@ -161,66 +161,65 @@ function ImageModal({
 
   return (
     <Dialog open={!!image} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Generated Image
-            {image.isScene && (
-              <span className="px-2 py-0.5 rounded bg-amber-500 text-black text-xs font-medium">
-                Shot {image.sceneIndex}
-              </span>
-            )}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-[95vw] max-h-[95vh] w-auto p-0 bg-black/95 border-neutral-800 overflow-hidden">
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/60 hover:bg-black/80 text-neutral-400 hover:text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Image */}
-          <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
-            <img
-              src={image.url}
-              alt={`Generated ${image.id}`}
-              className="w-full h-full object-contain"
-            />
+        {/* Main image - as large as possible */}
+        <div className="relative flex items-center justify-center" style={{ maxHeight: "85vh" }}>
+          <img
+            src={image.url}
+            alt={`Generated ${image.id}`}
+            className="max-w-full max-h-[85vh] object-contain"
+          />
+
+          {/* Scene badge */}
+          {image.isScene && (
+            <div className="absolute top-4 left-4 px-3 py-1 rounded bg-amber-500 text-black text-sm font-medium">
+              Shot {image.sceneIndex}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom bar with actions and details */}
+        <div className="bg-neutral-900/90 border-t border-neutral-800 px-4 py-3 space-y-3">
+          {/* Prompt */}
+          <div>
+            <p className="text-sm text-neutral-300 leading-relaxed max-h-20 overflow-y-auto">
+              {image.prompt}
+            </p>
           </div>
 
-          {/* Details */}
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-2">
-                Prompt
-              </h4>
-              <p className="text-sm text-neutral-300 leading-relaxed max-h-48 overflow-y-auto">
-                {image.prompt}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
+          {/* Meta and actions row */}
+          <div className="flex items-center justify-between">
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
               <div>
-                <span className="text-neutral-500">Model:</span>
-                <p className="text-amber-500">{image.settings.model}</p>
+                <span className="text-neutral-500">Model: </span>
+                <span className="text-amber-500">{image.settings.model}</span>
               </div>
               <div>
-                <span className="text-neutral-500">Aspect Ratio:</span>
-                <p className="text-neutral-300">{image.settings.aspectRatio}</p>
+                <span className="text-neutral-500">Aspect: </span>
+                <span className="text-neutral-300">{image.settings.aspectRatio}</span>
               </div>
               {image.settings.seed && (
                 <div>
-                  <span className="text-neutral-500">Seed:</span>
-                  <p className="text-neutral-300 font-mono">
-                    {image.settings.seed}
-                  </p>
+                  <span className="text-neutral-500">Seed: </span>
+                  <span className="text-neutral-300 font-mono">{image.settings.seed}</span>
                 </div>
               )}
               <div>
-                <span className="text-neutral-500">Generated:</span>
-                <p className="text-neutral-300">
-                  {new Date(image.timestamp).toLocaleString()}
-                </p>
+                <span className="text-neutral-500">Generated: </span>
+                <span className="text-neutral-300">{new Date(image.timestamp).toLocaleString()}</span>
               </div>
             </div>
 
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleCopyPrompt}>
+            <div className="flex items-center gap-2">
+              <Button size="sm" onClick={handleCopyPrompt}>
                 {copied ? (
                   <>
                     <Check className="h-4 w-4" />
@@ -233,7 +232,7 @@ function ImageModal({
                   </>
                 )}
               </Button>
-              <Button variant="secondary" onClick={handleDownload}>
+              <Button variant="secondary" size="sm" onClick={handleDownload}>
                 <Download className="h-4 w-4" />
                 Download
               </Button>
