@@ -3,10 +3,15 @@ import { NextRequest, NextResponse } from 'next/server';
 const AUTH_COOKIE = 'scenematic_auth';
 
 // Paths that don't require authentication
-const publicPaths = ['/login', '/api/auth'];
+const publicPaths = ['/login'];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Allow all API routes
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
 
   // Allow public paths
   if (publicPaths.some(path => pathname.startsWith(path))) {
