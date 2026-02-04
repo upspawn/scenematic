@@ -200,6 +200,19 @@ export function GeneratePanel() {
           </Select>
         </div>
 
+        {/* Reference images indicator */}
+        {imageUrls.length > 0 && (
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm flex items-start gap-2">
+            <Sparkles className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <div>
+              <span className="font-medium">Edit mode active</span>
+              <p className="text-xs text-amber-400/80 mt-0.5">
+                {imageUrls.length} reference image{imageUrls.length > 1 ? "s" : ""} will be used for visual consistency
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Generate buttons */}
         <div className="space-y-2">
           <Button

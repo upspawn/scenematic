@@ -44,17 +44,29 @@ export function aspectRatioToImageSize(
 }
 
 // Get model ID from friendly name
-export function getModelId(model: string): string {
-  const models: Record<string, string> = {
+// When reference images are provided, we need to use the /edit endpoint
+export function getModelId(model: string, hasReferenceImages: boolean): string {
+  const baseModels: Record<string, string> = {
     "nano-banana-pro": "fal-ai/nano-banana-pro",
     "flux-2-pro": "fal-ai/flux-2-pro",
   };
-  return models[model] || "fal-ai/nano-banana-pro";
+
+  const editModels: Record<string, string> = {
+    "nano-banana-pro": "fal-ai/nano-banana-pro/edit",
+    "flux-2-pro": "fal-ai/flux-2-pro/edit",
+  };
+
+  // Use edit endpoint when reference images are provided
+  if (hasReferenceImages) {
+    return editModels[model] || "fal-ai/nano-banana-pro/edit";
+  }
+
+  return baseModels[model] || "fal-ai/nano-banana-pro";
 }
 
 // Check if model is nano-banana variant
-function isNanoBananaModel(model: string): boolean {
-  return model.includes("nano-banana");
+function isNanoBananaModel(modelId: string): boolean {
+  return modelId.includes("nano-banana");
 }
 
 // Generate a single image
@@ -67,16 +79,17 @@ export async function generateImage(
     imageUrls?: string[];
   } = {}
 ): Promise<FalImageResult> {
-  const modelId = getModelId(options.model || "nano-banana-pro");
+  const hasReferenceImages = !!(options.imageUrls && options.imageUrls.length > 0);
+  const modelId = getModelId(options.model || "nano-banana-pro", hasReferenceImages);
   const aspectRatio = options.aspectRatio || "16:9";
 
   // Build input based on model type
-  // nano-banana uses "aspect_ratio" (string), flux uses "image_size" (enum)
   const input: Record<string, unknown> = {
     prompt,
     num_images: 1,
   };
 
+  // Set aspect ratio / image size based on model
   if (isNanoBananaModel(modelId)) {
     // Nano Banana models use aspect_ratio as string
     input.aspect_ratio = aspectRatio;
@@ -89,15 +102,19 @@ export async function generateImage(
     input.seed = options.seed;
   }
 
-  // Reference images - both models support image_urls
-  if (options.imageUrls && options.imageUrls.length > 0) {
+  // Reference images - ONLY works with /edit endpoints
+  // The base text-to-image endpoints do NOT support reference images
+  if (hasReferenceImages) {
     input.image_urls = options.imageUrls;
+    console.log(`[fal] Using EDIT endpoint with ${options.imageUrls!.length} reference image(s)`);
   }
 
   console.log(`[fal] Calling ${modelId} with:`, {
-    ...input,
     prompt: prompt.substring(0, 100) + "...",
-    image_urls: options.imageUrls ? `[${options.imageUrls.length} images]` : undefined,
+    aspect_ratio: isNanoBananaModel(modelId) ? aspectRatio : undefined,
+    image_size: !isNanoBananaModel(modelId) ? aspectRatioToImageSize(aspectRatio) : undefined,
+    image_urls: hasReferenceImages ? `[${options.imageUrls!.length} images]` : undefined,
+    seed: options.seed,
   });
 
   const result = await fal.subscribe(modelId, {
@@ -165,6 +182,10 @@ export async function generateScene(
 }
 
 // Upload an image and get a URL
+// For fal.ai, we need to either:
+// 1. Use a publicly accessible URL
+// 2. Use fal.ai's storage
+// 3. Use base64 data URIs (supported by some models)
 export async function uploadImage(file: File): Promise<string> {
   // Convert file to base64 data URI for fal.ai
   const buffer = await file.arrayBuffer();
@@ -172,7 +193,7 @@ export async function uploadImage(file: File): Promise<string> {
   const mimeType = file.type || "image/png";
   const dataUri = `data:${mimeType};base64,${base64}`;
 
-  // For fal.ai, we can use data URIs directly as image_urls
+  // For fal.ai edit endpoints, data URIs should work
   return dataUri;
 }
 
