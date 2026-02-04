@@ -5,7 +5,7 @@ const AUTH_COOKIE = 'scenematic_auth';
 // Paths that don't require authentication
 const publicPaths = ['/login'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow all API routes
