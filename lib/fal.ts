@@ -12,30 +12,20 @@ export interface FalImageResult {
     height: number;
     content_type: string;
   }>;
+  image?: {
+    url: string;
+    width: number;
+    height: number;
+  };
   seed: number;
   prompt: string;
 }
 
-export interface FalGenerateInput {
-  prompt: string;
-  image_size?:
-    | "square_hd"
-    | "square"
-    | "portrait_4_3"
-    | "portrait_16_9"
-    | "landscape_4_3"
-    | "landscape_16_9"
-    | { width: number; height: number };
-  seed?: number;
-  num_images?: number;
-  image_urls?: string[];
-}
-
-// Map aspect ratio to fal.ai image_size
+// Map aspect ratio to fal.ai image_size for Flux models
 export function aspectRatioToImageSize(
   aspectRatio: string
-): FalGenerateInput["image_size"] {
-  const mapping: Record<string, FalGenerateInput["image_size"]> = {
+): string | { width: number; height: number } {
+  const mapping: Record<string, string | { width: number; height: number }> = {
     "1:1": "square_hd",
     "4:5": "portrait_4_3",
     "3:2": "landscape_4_3",
@@ -62,6 +52,11 @@ export function getModelId(model: string): string {
   return models[model] || "fal-ai/nano-banana-pro";
 }
 
+// Check if model is nano-banana variant
+function isNanoBananaModel(model: string): boolean {
+  return model.includes("nano-banana");
+}
+
 // Generate a single image
 export async function generateImage(
   prompt: string,
@@ -73,28 +68,57 @@ export async function generateImage(
   } = {}
 ): Promise<FalImageResult> {
   const modelId = getModelId(options.model || "nano-banana-pro");
-  const imageSize = aspectRatioToImageSize(options.aspectRatio || "16:9");
+  const aspectRatio = options.aspectRatio || "16:9";
 
-  const input: FalGenerateInput = {
+  // Build input based on model type
+  // nano-banana uses "aspect_ratio" (string), flux uses "image_size" (enum)
+  const input: Record<string, unknown> = {
     prompt,
-    image_size: imageSize,
     num_images: 1,
   };
+
+  if (isNanoBananaModel(modelId)) {
+    // Nano Banana models use aspect_ratio as string
+    input.aspect_ratio = aspectRatio;
+  } else {
+    // Flux models use image_size
+    input.image_size = aspectRatioToImageSize(aspectRatio);
+  }
 
   if (options.seed !== undefined) {
     input.seed = options.seed;
   }
 
+  // Reference images - both models support image_urls
   if (options.imageUrls && options.imageUrls.length > 0) {
     input.image_urls = options.imageUrls;
   }
+
+  console.log(`[fal] Calling ${modelId} with:`, {
+    ...input,
+    prompt: prompt.substring(0, 100) + "...",
+    image_urls: options.imageUrls ? `[${options.imageUrls.length} images]` : undefined,
+  });
 
   const result = await fal.subscribe(modelId, {
     input,
     logs: true,
   });
 
-  return result.data as FalImageResult;
+  const data = result.data as FalImageResult;
+
+  // Handle different response formats
+  let images = data.images;
+  if (!images || images.length === 0) {
+    if (data.image) {
+      images = [data.image as FalImageResult["images"][0]];
+    }
+  }
+
+  return {
+    ...data,
+    images: images || [],
+  };
 }
 
 // Generate multiple images for a scene
